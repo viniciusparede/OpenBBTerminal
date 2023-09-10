@@ -4,6 +4,7 @@ __docformat__ = "numpy"
 import logging
 import warnings
 from datetime import datetime, timedelta
+from itertools import combinations
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -11,6 +12,11 @@ import pandas as pd
 import yfinance as yf
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import normalize
+from statsmodels.tsa.stattools import coint
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import acf
+from statsmodels.api import OLS
+from statsmodels.api import add_constant
 
 from openbb_terminal.decorators import log_start_end
 from openbb_terminal.rich_config import console
@@ -261,3 +267,108 @@ def get_sp500_comps_tsne(
     data = data.sort_values(by="dist")
 
     return data
+
+
+@log_start_end(log=logger)
+def get_cointegration_pairs(
+    similar: List[str],
+    cointegration_period: int = 180,
+    cointegration_alpha: float = 0.05,
+    stationary_alpha: float = 0.01,
+):
+    def is_cointegrated() -> bool:
+        """Cointegration test"""
+        cointegration_p_value = coint(asset1_vals, asset2_vals)[1]
+        return cointegration_p_value < cointegration_alpha
+
+    def is_stationary() -> bool:
+        """Stationary test"""
+        stationary_p_value = adfuller(residual)[1]
+        return stationary_p_value < stationary_alpha
+
+    def get_residual() -> List[float]:
+        """
+        Fit a linear regression model using Ordinary Least Squares (OLS), calculate residuals,
+        and normalize them using the Z-score.
+        """
+        independent_variable = asset1_vals
+        dependent_variable = asset2_vals
+
+        x_train = add_constant(independent_variable)
+        y_train = dependent_variable
+
+        regression_model = OLS(y_train, x_train).fit()
+
+        # intercept
+        beta0 = regression_model.params[0]
+
+        # slope
+        beta = regression_model.params[1]
+
+        if beta > 0:
+            # value predicted
+            y_pred = beta0 + beta * independent_variable
+
+            residual = y_train - y_pred
+
+            residual_normalized = (residual - np.mean(residual)) / np.std(residual)
+
+            return residual_normalized.tolist()
+
+    cointegration_pairs_dataframes = []
+
+    start_date = (datetime.now() - timedelta(days=cointegration_period * 2)).strftime(
+        "%Y-%m-%d"
+    )
+
+    candle_type = "a"
+    similar_tickers_dataframe = (
+        yf.download(
+            similar,
+            start=start_date,
+            progress=False,
+            threads=False,
+        )[d_candle_types[candle_type]]
+        .reset_index()
+        .tail(cointegration_period)
+    )
+
+    asset_pairs = list(combinations(similar_tickers_dataframe.columns, 2))
+    combination_pairs = asset_pairs
+
+    for combination_pair in combination_pairs:
+        asset1 = combination_pair[0]
+        asset2 = combination_pair[1]
+
+        asset1_vals = similar_tickers_dataframe.loc[:, asset1].copy().values
+        asset2_vals = similar_tickers_dataframe.loc[:, asset2].copy().values
+
+        if is_cointegrated():
+            residual = get_residual()
+            if is_stationary():
+                cointegration_pairs_dataframes.append(
+                    pd.DataFrame({f"{asset1}/{asset2}": residual})
+                )
+
+    return pd.concat(cointegration_pairs_dataframes, axis=1)
+
+
+if __name__ == "__main__":
+    data = get_cointegration_pairs(
+        similar=[
+            "NVDA",
+            "AMD",
+            "MPWR",
+            "CDNS",
+            "SNPS",
+            "ON",
+            "AMAT",
+            "AVGO",
+            "ORCL",
+            "ANET",
+            "KLAC",
+        ]
+    )
+
+    print(data)
+    print()
