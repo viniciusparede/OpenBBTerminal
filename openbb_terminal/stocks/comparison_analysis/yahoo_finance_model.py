@@ -354,21 +354,33 @@ def get_cointegration_pairs(
 
 
 if __name__ == "__main__":
-    data = get_cointegration_pairs(
-        similar=[
-            "NVDA",
-            "AMD",
-            "MPWR",
-            "CDNS",
-            "SNPS",
-            "ON",
-            "AMAT",
-            "AVGO",
-            "ORCL",
-            "ANET",
-            "KLAC",
-        ]
-    )
+    similar_get = [
+        "NVDA",
+        "CEVA",
+        "CRUS",
+        "GFS",
+        "MRVL",
+        "NVEC",
+        "POWI",
+        "PXLW",
+        "SKYT",
+        "SWKS",
+        "TXN",
+    ]
+    similar_tsne = [
+        "NVDA",
+        "AMD",
+        "MPWR",
+        "CDNS",
+        "SNPS",
+        "ANET",
+        "AVGO",
+        "AMAT",
+        "ON",
+        "ORCL",
+        "KLAC",
+    ]
+    data = get_cointegration_pairs(similar_get)
 
     print(data)
     print()
