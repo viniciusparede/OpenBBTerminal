@@ -349,8 +349,8 @@ def get_cointegration_pairs(
                 cointegration_pairs_dataframes.append(
                     pd.DataFrame({f"{asset1}/{asset2}": residual})
                 )
-
-    return pd.concat(cointegration_pairs_dataframes, axis=1)
+    if cointegration_pairs_dataframes:
+        return pd.concat(cointegration_pairs_dataframes, axis=1)
 
 
 if __name__ == "__main__":
