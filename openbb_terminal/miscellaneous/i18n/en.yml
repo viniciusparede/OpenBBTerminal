@@ -307,6 +307,7 @@ en:
   stocks/ca/historical: historical price data comparison
   stocks/ca/hcorr: historical price correlation
   stocks/ca/volume: historical volume data comparison
+  stocks/ca/cointpairs: cointegration pairs trading
   stocks/ca/income: income financials comparison
   stocks/ca/balance: balance financials comparison
   stocks/ca/cashflow: cashflow comparison

@@ -320,28 +320,27 @@ def get_cointegration_pairs(
     start_date = (datetime.now() - timedelta(days=cointegration_period * 2)).strftime(
         "%Y-%m-%d"
     )
-
+    end_date = datetime.now()
     candle_type = "a"
-    similar_tickers_dataframe = (
-        yf.download(
-            similar,
-            start=start_date,
-            progress=False,
-            threads=False,
-        )[d_candle_types[candle_type]]
-        .reset_index()
+
+    df_similar = (
+        get_historical(similar, start_date, end_date, candle_type=candle_type)
         .tail(cointegration_period)
+        .reset_index()
     )
 
-    asset_pairs = list(combinations(similar_tickers_dataframe.columns, 2))
-    combination_pairs = asset_pairs
+    date = df_similar.Date
+
+    cointegration_pairs_dataframes.append(pd.DataFrame(date))
+
+    combination_pairs = list(combinations(df_similar.columns, 2))
 
     for combination_pair in combination_pairs:
         asset1 = combination_pair[0]
         asset2 = combination_pair[1]
 
-        asset1_vals = similar_tickers_dataframe.loc[:, asset1].copy().values
-        asset2_vals = similar_tickers_dataframe.loc[:, asset2].copy().values
+        asset1_vals = df_similar.loc[:, asset1].copy().values
+        asset2_vals = df_similar.loc[:, asset2].copy().values
 
         if is_cointegrated():
             residual = get_residual()
@@ -350,37 +349,43 @@ def get_cointegration_pairs(
                     pd.DataFrame({f"{asset1}/{asset2}": residual})
                 )
     if cointegration_pairs_dataframes:
-        return pd.concat(cointegration_pairs_dataframes, axis=1)
+        df_pairs = pd.concat(cointegration_pairs_dataframes, axis=1)
+        df_pairs = df_pairs.set_index("Date")
+        return df_pairs
 
 
+# debug
 if __name__ == "__main__":
-    similar_get = [
-        "NVDA",
-        "CEVA",
-        "CRUS",
-        "GFS",
-        "MRVL",
-        "NVEC",
-        "POWI",
-        "PXLW",
-        "SKYT",
-        "SWKS",
-        "TXN",
-    ]
-    similar_tsne = [
-        "NVDA",
-        "AMD",
-        "MPWR",
-        "CDNS",
-        "SNPS",
-        "ANET",
-        "AVGO",
-        "AMAT",
-        "ON",
-        "ORCL",
-        "KLAC",
-    ]
-    data = get_cointegration_pairs(similar_get)
+    """data = get_cointegration_pairs(
+        similar=[
+            "VALE3.SA",
+            "FCX",
+            "NEM",
+            "LYB",
+            "DOW",
+            "NUE",
+            "STLD",
+            "ALB",
+            "DD",
+            "EMN",
+            "CE",
+        ]
+    )"""
+
+    data = get_cointegration_pairs(
+        similar=[
+            "NVDA",
+            "AMD",
+            "MPWR",
+            "CDNS",
+            "SNPS",
+            "CPRT",
+            "AVGO",
+            "ANET",
+            "AMAT",
+            "KLAC",
+            "LRCX",
+        ]
+    )
 
     print(data)
-    print()

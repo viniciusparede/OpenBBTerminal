@@ -55,6 +55,7 @@ class ComparisonAnalysisController(BaseController):
         "historical",
         "hcorr",
         "volume",
+        "cointpairs",
         "income",
         "balance",
         "cashflow",
@@ -119,6 +120,7 @@ class ComparisonAnalysisController(BaseController):
         mt.add_cmd("historical", self.similar and len(self.similar) > 1)
         mt.add_cmd("hcorr", self.similar and len(self.similar) > 1)
         mt.add_cmd("volume", self.similar and len(self.similar) > 1)
+        mt.add_cmd("cointpairs", self.similar and len(self.similar) > 1)
         mt.add_cmd("income", self.similar and len(self.similar) > 1)
         mt.add_cmd("balance", self.similar and len(self.similar) > 1)
         mt.add_cmd("cashflow", self.similar and len(self.similar) > 1)
@@ -677,6 +679,54 @@ class ComparisonAnalysisController(BaseController):
 
             else:
                 console.print("Please make sure there are similar tickers selected. \n")
+
+    @log_start_end(log=logger)
+    def call_cointpairs(self, other_args: List[str]):
+        parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            prog="cointpairs",
+            description="""Get pairs trading with cointegration approach.""",
+        )
+
+        parser.add_argument(
+            "-p",
+            "--cointperiod",
+            default=180,
+            dest="cointperiod",
+            type=check_non_negative,
+            help="Cointegration period",
+        )
+
+        parser.add_argument(
+            "-ca",
+            "--cointalpha",
+            default=0.05,
+            dest="cointalpha",
+            type=check_non_negative,
+            help="Cointegration hypotesis test alpha",
+        )
+
+        parser.add_argument(
+            "-sta",
+            "--statalpha",
+            default=0.01,
+            dest="statalpha",
+            type=check_non_negative,
+            help="Stationary hypotesis test alpha",
+        )
+
+        ns_parser = self.parse_known_args_and_warn(
+            parser, other_args, EXPORT_BOTH_RAW_DATA_AND_FIGURES
+        )
+
+        if ns_parser:
+            if self.similar and len(self.similar) > 1:
+                cointegration_pairs = yahoo_finance_view.display_coint_pairs(similar=self.similar, cointegration_period=ns_parser.cointperiod, cointegration_alpha=ns_parser.cointalpha, stationary_alpha=ns_parser.statalpha)
+
+                console.print(
+                    f"[YahooFinance] Long/Short Pairs: {', '.join(cointegration_pairs.columns)}", "\n"
+                )
 
     @log_start_end(log=logger)
     def call_balance(self, other_args: List[str]):

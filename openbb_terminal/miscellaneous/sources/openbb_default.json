@@ -257,6 +257,7 @@
       "historical": ["YahooFinance"],
       "hcorr": ["YahooFinance"],
       "volume": ["YahooFinance"],
+      "cointpairs": ["YahooFinance"],
       "income": ["MarketWatch"],
       "balance": ["MarketWatch"],
       "cashflow": ["MarketWatch"],

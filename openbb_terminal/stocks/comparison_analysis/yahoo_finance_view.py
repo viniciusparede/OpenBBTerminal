@@ -338,3 +338,34 @@ def display_sp500_comps_tsne(
         fig.show()
 
     return top_n_name
+
+
+def display_coint_pairs(
+    similar: List[str],
+    cointegration_period: int,
+    cointegration_alpha: float,
+    stationary_alpha: float,
+    external_axes: bool = False,
+) -> pd.DataFrame:
+    df_pairs = yahoo_finance_model.get_cointegration_pairs(
+        similar=similar,
+        cointegration_period=cointegration_period,
+        cointegration_alpha=cointegration_alpha,
+        stationary_alpha=stationary_alpha,
+    )
+
+    fig = OpenBBFigure(
+        yaxis_title=f""
+    )
+    fig.set_title("Cointegration Long/Short pairs")
+
+    for ticker in df_pairs.columns:
+        fig.add_scatter(
+            x=df_pairs.index,
+            y=df_pairs[ticker],
+            name=ticker,
+        )
+
+    fig.show(external=external_axes)
+
+    return df_pairs 
