@@ -722,11 +722,19 @@ class ComparisonAnalysisController(BaseController):
 
         if ns_parser:
             if self.similar and len(self.similar) > 1:
-                cointegration_pairs = yahoo_finance_view.display_coint_pairs(similar=self.similar, cointegration_period=ns_parser.cointperiod, cointegration_alpha=ns_parser.cointalpha, stationary_alpha=ns_parser.statalpha)
-
-                console.print(
-                    f"[YahooFinance] Long/Short Pairs: {', '.join(cointegration_pairs.columns)}", "\n"
+                cointegration_pairs = yahoo_finance_view.display_coint_pairs(
+                    similar=self.similar,
+                    cointegration_period=ns_parser.cointperiod,
+                    cointegration_alpha=ns_parser.cointalpha,
+                    stationary_alpha=ns_parser.statalpha,
+                    half_time_rounding_type="floor",
+                    candle_type="a",
                 )
+
+                """console.print(
+                    f"[YahooFinance] Long/Short Pairs: {', '.join(cointegration_pairs.columns)}",
+                    "\n",
+                )"""
 
     @log_start_end(log=logger)
     def call_balance(self, other_args: List[str]):

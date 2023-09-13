@@ -345,27 +345,53 @@ def display_coint_pairs(
     cointegration_period: int,
     cointegration_alpha: float,
     stationary_alpha: float,
+    half_time_rounding_type: str,
+    candle_type: str,
+    stop_time_offset: int = 5,
     external_axes: bool = False,
-) -> pd.DataFrame:
-    df_pairs = yahoo_finance_model.get_cointegration_pairs(
+):
+    data_pairs = yahoo_finance_model.get_cointegration_pairs(
         similar=similar,
         cointegration_period=cointegration_period,
         cointegration_alpha=cointegration_alpha,
         stationary_alpha=stationary_alpha,
+        half_time_rounding_type=half_time_rounding_type,
+        candle_type=candle_type,
     )
 
-    fig = OpenBBFigure(
-        yaxis_title=f""
-    )
-    fig.set_title("Cointegration Long/Short pairs")
+    fig = OpenBBFigure(yaxis_title=f"")
+    fig.set_title("Cointegration Pairs Trading")
 
-    for ticker in df_pairs.columns:
+    fig.add_hline(y=3, line_width=4, line_dash="dash")
+    fig.add_hline(y=2, line_width=3, line_dash="dash")
+    fig.add_hline(y=1, line_width=2, line_dash="dash")
+    # fig.add_hline(y=0, line_width=1, line_dash="dash")
+    fig.add_hline(y=-1, line_width=2, line_dash="dash")
+    fig.add_hline(y=-2, line_width=3, line_dash="dash")
+    fig.add_hline(y=-3, line_width=4, line_dash="dash")
+    fig.add_vline(
+        x=datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d"),
+        line_width=3,
+        line_color="red",
+    )
+
+    fig.update_yaxes(range=[-4, 4])
+    fig.update_xaxes(
+        range=[
+            data_pairs[0]["date"].min(),
+            (
+                datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d")
+                + timedelta(days=stop_time_offset)
+            ).strftime("%Y-%m-%d"),
+        ]
+    )
+    for data_pair in data_pairs:
         fig.add_scatter(
-            x=df_pairs.index,
-            y=df_pairs[ticker],
-            name=ticker,
+            x=data_pair["date"],
+            y=data_pair["residual"],
+            name=data_pair["pair"],
         )
 
     fig.show(external=external_axes)
 
-    return df_pairs 
+    return data_pair

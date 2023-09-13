@@ -5,7 +5,7 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 from itertools import combinations
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TypedDict, Union
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,14 @@ d_candle_types = {
     "a": "Adj Close",
     "v": "Volume",
 }
+
+
+class PairsTrading(TypedDict):
+    pair: str
+    date: pd.Series
+    residual: List[float]
+    half_time: int
+    stop_time: str
 
 
 @log_start_end(log=logger)
@@ -275,7 +283,9 @@ def get_cointegration_pairs(
     cointegration_period: int = 180,
     cointegration_alpha: float = 0.05,
     stationary_alpha: float = 0.01,
-):
+    half_time_rounding_type: str = "floor",
+    candle_type: str = "a",
+) -> List[PairsTrading]:
     def is_cointegrated() -> bool:
         """Cointegration test"""
         cointegration_p_value = coint(asset1_vals, asset2_vals)[1]
@@ -315,77 +325,150 @@ def get_cointegration_pairs(
 
             return residual_normalized.tolist()
 
-    cointegration_pairs_dataframes = []
+    def get_half_time() -> int:
+        """
+        Calculate the half-life of a mean-reverting series.
 
-    start_date = (datetime.now() - timedelta(days=cointegration_period * 2)).strftime(
-        "%Y-%m-%d"
-    )
-    end_date = datetime.now()
-    candle_type = "a"
+        The half-life is the period of time required for the absolute value of an excess in a time series to reduce to half of its initial value. It is commonly used in the context of mean-reverting time series to measure the speed at which the series tends to revert to the mean.
 
+        The calculation of the half-life is based on the first order autocorrelation of the residuals of the series. The natural logarithm of 2 is divided by the logarithm of the first order autocorrelation, and the result is then rounded up to the next whole number.
+
+        Note:
+            This property assumes that self.residuals and self.alpha have been defined.
+            The resulting half-life is returned as an integer, rounded up to the next whole number.
+
+        Returns:
+            half_life (int): The half-life of the residuals of the series, rounded up to the next whole number.
+        """
+
+        def half_time() -> float:
+            return float(
+                -np.log(2)
+                / np.log(acf(x=residual, alpha=stationary_alpha, nlags=1)[0][1])
+            )
+
+        if half_time_rounding_type == "floor":
+            return int(np.floor(half_time()))
+
+        if half_time_rounding_type == "ceil":
+            return int(np.ceil(half_time()).astype("int"))
+
+    # TODO: Tratar excessões
+    if cointegration_period > 252:
+        return
+
+    if candle_type == "v":
+        return
+
+    data: List[PairsTrading] = []
+    ticker = similar[0]
+
+    # TODO: Investigar o motivo de aparecer dados NaN no dia atual
     df_similar = (
-        get_historical(similar, start_date, end_date, candle_type=candle_type)
+        get_historical(similar, candle_type=candle_type)
+        .fillna(method="ffill")
         .tail(cointegration_period)
-        .reset_index()
     )
 
-    date = df_similar.Date
-
-    cointegration_pairs_dataframes.append(pd.DataFrame(date))
-
+    date = df_similar.index
     combination_pairs = list(combinations(df_similar.columns, 2))
+    ticker_combination_pairs = [pair for pair in combination_pairs if ticker in pair]
 
-    for combination_pair in combination_pairs:
-        asset1 = combination_pair[0]
-        asset2 = combination_pair[1]
+    for ticker_combination_pair in ticker_combination_pairs:
+        asset1 = ticker_combination_pair[0]
+        asset2 = ticker_combination_pair[1]
 
         asset1_vals = df_similar.loc[:, asset1].copy().values
         asset2_vals = df_similar.loc[:, asset2].copy().values
 
         if is_cointegrated():
             residual = get_residual()
+
             if is_stationary():
-                cointegration_pairs_dataframes.append(
-                    pd.DataFrame({f"{asset1}/{asset2}": residual})
+                half_time = get_half_time()
+                stop_time = (datetime.now() + timedelta(days=half_time)).strftime(
+                    "%Y-%m-%d"
                 )
-    if cointegration_pairs_dataframes:
-        df_pairs = pd.concat(cointegration_pairs_dataframes, axis=1)
-        df_pairs = df_pairs.set_index("Date")
-        return df_pairs
+                data.append(
+                    {
+                        "pair": f"{asset1}/{asset2}",
+                        "date": date,
+                        "residual": residual,
+                        "half_time": half_time,
+                        "stop_time": stop_time,
+                    }
+                )
+
+    if data:
+        return data
+
+    return None
 
 
 # debug
 if __name__ == "__main__":
-    """data = get_cointegration_pairs(
-        similar=[
-            "VALE3.SA",
-            "FCX",
-            "NEM",
-            "LYB",
-            "DOW",
-            "NUE",
-            "STLD",
-            "ALB",
-            "DD",
-            "EMN",
-            "CE",
-        ]
-    )"""
-
-    data = get_cointegration_pairs(
-        similar=[
+    assets = [
+        [
+            "AAPL",
+            "CMG",
+            "MSFT",
+            "ORCL",
+            "TSLA",
+            "ADBE",
+            "CRM",
+            "AMZN",
+            "GOOG",
+            "GOOGL",
+            "CDNS",
+        ],
+        [
+            "BOVA11.SA",
+            "RJF",
+            "AMP",
+            "VTRS",
+            "SCHW",
+            "AFL",
+            "PFG",
+            "GL",
+            "DXC",
+            "PRU",
+            "MET",
+        ],
+        [
             "NVDA",
             "AMD",
             "MPWR",
             "CDNS",
             "SNPS",
-            "CPRT",
             "AVGO",
+            "ON",
             "ANET",
             "AMAT",
+            "ORCL",
             "KLAC",
-            "LRCX",
-        ]
+        ],
+        [
+            "PETR4.SA",
+            "CVX",
+            "OXY",
+            "XOM",
+            "COP",
+            "PXD",
+            "EOG",
+            "HES",
+            "MPC",
+            "MRO",
+            "VLO",
+        ],
+    ]
+
+    data = get_cointegration_pairs(
+        similar=assets[0],
+        cointegration_period=180,
+        cointegration_alpha=0.05,
+        stationary_alpha=0.01,
+        half_time_rounding_type="floor",
+        candle_type="a",
     )
 
     print(data)
