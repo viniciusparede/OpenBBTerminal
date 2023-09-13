@@ -5,18 +5,15 @@ import logging
 import warnings
 from datetime import datetime, timedelta
 from itertools import combinations
-from typing import List, Optional, Tuple, TypedDict, Union
+from typing import List, Optional, Tuple, TypedDict
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import normalize
-from statsmodels.tsa.stattools import coint
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.tsa.stattools import acf
-from statsmodels.api import OLS
-from statsmodels.api import add_constant
+from statsmodels.tsa.stattools import coint, acf, adfuller
+from statsmodels.api import OLS, add_constant
 
 from openbb_terminal.decorators import log_start_end
 from openbb_terminal.rich_config import console
@@ -37,6 +34,7 @@ class PairsTrading(TypedDict):
     pair: str
     date: pd.Series
     residual: List[float]
+    beta: float
     half_time: int
     stop_time: str
 
@@ -291,39 +289,40 @@ def get_cointegration_pairs(
         cointegration_p_value = coint(asset1_vals, asset2_vals)[1]
         return cointegration_p_value < cointegration_alpha
 
+    def get_linear_parameters() -> Tuple[float, float]:
+        "Fit a linear regression model using Ordinary Least Squares (OLS)"
+        x_train = add_constant(independent_variable)
+        y_train = dependent_variable
+
+        # Linear Regression Model
+        regression_model = OLS(y_train, x_train).fit()
+
+        # Intercept
+        beta0 = float(regression_model.params[0])
+
+        # Slope
+        beta = float(regression_model.params[1])
+
+        # Check is valid LONG/SHORT  pair
+        # If the beta is negative:
+        #   The operation is invalid because the operation trade is LONG/LONG or SHORT/SHORT
+        if beta > 0:
+            return beta0, beta
+
+    def get_residual() -> List[float]:
+        """
+        Calculate residuals and normalize them using the Z-score.
+        """
+        y_train = dependent_variable
+        y_pred = beta0 + beta * independent_variable
+        residual = y_train - y_pred
+        residual_normalized = (residual - np.mean(residual)) / np.std(residual)
+        return residual_normalized.tolist()
+
     def is_stationary() -> bool:
         """Stationary test"""
         stationary_p_value = adfuller(residual)[1]
         return stationary_p_value < stationary_alpha
-
-    def get_residual() -> List[float]:
-        """
-        Fit a linear regression model using Ordinary Least Squares (OLS), calculate residuals,
-        and normalize them using the Z-score.
-        """
-        independent_variable = asset1_vals
-        dependent_variable = asset2_vals
-
-        x_train = add_constant(independent_variable)
-        y_train = dependent_variable
-
-        regression_model = OLS(y_train, x_train).fit()
-
-        # intercept
-        beta0 = regression_model.params[0]
-
-        # slope
-        beta = regression_model.params[1]
-
-        if beta > 0:
-            # value predicted
-            y_pred = beta0 + beta * independent_variable
-
-            residual = y_train - y_pred
-
-            residual_normalized = (residual - np.mean(residual)) / np.std(residual)
-
-            return residual_normalized.tolist()
 
     def get_half_time() -> int:
         """
@@ -382,6 +381,10 @@ def get_cointegration_pairs(
         asset2_vals = df_similar.loc[:, asset2].copy().values
 
         if is_cointegrated():
+            independent_variable = asset1_vals
+            dependent_variable = asset2_vals
+
+            beta0, beta = get_linear_parameters()
             residual = get_residual()
 
             if is_stationary():
@@ -394,6 +397,7 @@ def get_cointegration_pairs(
                         "pair": f"{asset1}/{asset2}",
                         "date": date,
                         "residual": residual,
+                        "beta": beta,
                         "half_time": half_time,
                         "stop_time": stop_time,
                     }
@@ -401,8 +405,6 @@ def get_cointegration_pairs(
 
     if data:
         return data
-
-    return None
 
 
 # debug

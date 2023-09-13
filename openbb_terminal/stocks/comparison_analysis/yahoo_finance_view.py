@@ -365,7 +365,6 @@ def display_coint_pairs(
     fig.add_hline(y=3, line_width=4, line_dash="dash")
     fig.add_hline(y=2, line_width=3, line_dash="dash")
     fig.add_hline(y=1, line_width=2, line_dash="dash")
-    # fig.add_hline(y=0, line_width=1, line_dash="dash")
     fig.add_hline(y=-1, line_width=2, line_dash="dash")
     fig.add_hline(y=-2, line_width=3, line_dash="dash")
     fig.add_hline(y=-3, line_width=4, line_dash="dash")
@@ -373,18 +372,11 @@ def display_coint_pairs(
         x=datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d"),
         line_width=3,
         line_color="red",
+        name="Stop day",
     )
 
     fig.update_yaxes(range=[-4, 4])
-    fig.update_xaxes(
-        range=[
-            data_pairs[0]["date"].min(),
-            (
-                datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d")
-                + timedelta(days=stop_time_offset)
-            ).strftime("%Y-%m-%d"),
-        ]
-    )
+    
     for data_pair in data_pairs:
         fig.add_scatter(
             x=data_pair["date"],
