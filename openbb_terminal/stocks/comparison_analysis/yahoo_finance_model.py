@@ -282,8 +282,7 @@ def get_cointegration_pairs(
     cointegration_alpha: float = 0.05,
     stationary_alpha: float = 0.01,
     half_time_rounding_type: str = "floor",
-    candle_type: str = "a",
-) -> List[PairsTrading]:
+) -> Optional[List[PairsTrading]]:
     def is_cointegrated() -> bool:
         """Cointegration test"""
         cointegration_p_value = coint(asset1_vals, asset2_vals)[1]
@@ -352,26 +351,19 @@ def get_cointegration_pairs(
         if half_time_rounding_type == "ceil":
             return int(np.ceil(half_time()).astype("int"))
 
-    # TODO: Tratar excessões
-    if cointegration_period > 252:
-        return
-
-    if candle_type == "v":
-        return
-
     data: List[PairsTrading] = []
-    ticker = similar[0]
+    input_ticker = similar[0]
 
     # TODO: Investigar o motivo de aparecer dados NaN no dia atual
     df_similar = (
-        get_historical(similar, candle_type=candle_type)
-        .fillna(method="ffill")
-        .tail(cointegration_period)
+        get_historical(similar).fillna(method="ffill").tail(cointegration_period)
     )
 
     date = df_similar.index
     combination_pairs = list(combinations(df_similar.columns, 2))
-    ticker_combination_pairs = [pair for pair in combination_pairs if ticker in pair]
+    ticker_combination_pairs = [
+        pair for pair in combination_pairs if input_ticker in pair
+    ]
 
     for ticker_combination_pair in ticker_combination_pairs:
         asset1 = ticker_combination_pair[0]
@@ -405,6 +397,8 @@ def get_cointegration_pairs(
 
     if data:
         return data
+
+    return None
 
 
 # debug
@@ -465,7 +459,7 @@ if __name__ == "__main__":
     ]
 
     data = get_cointegration_pairs(
-        similar=assets[0],
+        similar=assets[2],
         cointegration_period=180,
         cointegration_alpha=0.05,
         stationary_alpha=0.01,

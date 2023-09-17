@@ -494,6 +494,17 @@ def check_non_negative(value) -> int:
     return new_value
 
 
+def check_cointegration_period(value: int) -> float:
+
+    check_positive(value)
+
+    if value > 252:
+        log_and_raise(argparse.ArgumentError(f"{value} is greater than 252"))
+
+    
+    return value
+
+
 def check_terra_address_format(address: str) -> str:
     """Validate that terra account address has proper format.
 

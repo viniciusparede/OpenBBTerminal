@@ -347,6 +347,7 @@ def display_coint_pairs(
     stationary_alpha: float,
     half_time_rounding_type: str,
     candle_type: str,
+    no_plot: bool = False,
     stop_time_offset: int = 5,
     external_axes: bool = False,
 ):
@@ -359,31 +360,36 @@ def display_coint_pairs(
         candle_type=candle_type,
     )
 
-    fig = OpenBBFigure(yaxis_title=f"")
-    fig.set_title("Cointegration Pairs Trading")
+    if data_pairs:
+        if not no_plot:
+            fig = OpenBBFigure(yaxis_title=f"")
+            fig.set_title("Cointegration Pairs Trading")
 
-    fig.add_hline(y=3, line_width=4, line_dash="dash")
-    fig.add_hline(y=2, line_width=3, line_dash="dash")
-    fig.add_hline(y=1, line_width=2, line_dash="dash")
-    fig.add_hline(y=-1, line_width=2, line_dash="dash")
-    fig.add_hline(y=-2, line_width=3, line_dash="dash")
-    fig.add_hline(y=-3, line_width=4, line_dash="dash")
-    fig.add_vline(
-        x=datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d"),
-        line_width=3,
-        line_color="red",
-        name="Stop day",
-    )
+            fig.add_hline(y=3, line_width=4, line_dash="dash")
+            fig.add_hline(y=2, line_width=3, line_dash="dash")
+            fig.add_hline(y=1, line_width=2, line_dash="dash")
+            fig.add_hline(y=-1, line_width=2, line_dash="dash")
+            fig.add_hline(y=-2, line_width=3, line_dash="dash")
+            fig.add_hline(y=-3, line_width=4, line_dash="dash")
+            fig.add_vline(
+                x=datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d"),
+                line_width=3,
+                line_color="red",
+                name="Stop day",
+            )
 
-    fig.update_yaxes(range=[-4, 4])
-    
-    for data_pair in data_pairs:
-        fig.add_scatter(
-            x=data_pair["date"],
-            y=data_pair["residual"],
-            name=data_pair["pair"],
-        )
+            fig.update_yaxes(range=[-4, 4])
+            
 
-    fig.show(external=external_axes)
+            for data_pair in data_pairs:
+                fig.add_scatter(
+                    x=data_pair["date"],
+                    y=data_pair["residual"],
+                    name=data_pair["pair"],
+                )
 
-    return data_pair
+            top_n_name = ""
+            if external_axes:
+                return top_n_name, fig.show(external=external_axes)
+
+            fig.show(external=external_axes)

@@ -17,6 +17,7 @@ from openbb_terminal.helper_funcs import (
     EXPORT_ONLY_RAW_DATA_ALLOWED,
     check_non_negative,
     check_positive,
+    check_proportion_range,
     check_start_less_than_end,
     valid_date,
 )
@@ -703,7 +704,7 @@ class ComparisonAnalysisController(BaseController):
             "--cointalpha",
             default=0.05,
             dest="cointalpha",
-            type=check_non_negative,
+            type=check_proportion_range,
             help="Cointegration hypotesis test alpha",
         )
 
@@ -712,8 +713,23 @@ class ComparisonAnalysisController(BaseController):
             "--statalpha",
             default=0.01,
             dest="statalpha",
-            type=check_non_negative,
+            type=check_proportion_range,
             help="Stationary hypotesis test alpha",
+        )
+
+        parser.add_argument(
+            "-r",
+            "--roundtype",
+            default="floor",
+            dest="roundtype",
+            help="Type of round half time",
+        )
+
+        if other_args and "-" not in other_args[0][0]:
+            other_args.insert(0, "-l")
+
+        parser.add_argument(
+            "-p", "--no_plot", action="store_true", default=False, dest="no_plot"
         )
 
         ns_parser = self.parse_known_args_and_warn(
@@ -728,7 +744,7 @@ class ComparisonAnalysisController(BaseController):
                     cointegration_alpha=ns_parser.cointalpha,
                     stationary_alpha=ns_parser.statalpha,
                     half_time_rounding_type="floor",
-                    candle_type="a",
+                    no_plot=ns_parser.no_plot,
                 )
 
                 """console.print(
