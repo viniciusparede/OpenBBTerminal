@@ -717,21 +717,6 @@ class ComparisonAnalysisController(BaseController):
             help="Stationary hypotesis test alpha",
         )
 
-        parser.add_argument(
-            "-r",
-            "--roundtype",
-            default="floor",
-            dest="roundtype",
-            help="Type of round half time",
-        )
-
-        if other_args and "-" not in other_args[0][0]:
-            other_args.insert(0, "-l")
-
-        parser.add_argument(
-            "-p", "--no_plot", action="store_true", default=False, dest="no_plot"
-        )
-
         ns_parser = self.parse_known_args_and_warn(
             parser, other_args, EXPORT_BOTH_RAW_DATA_AND_FIGURES
         )
@@ -743,8 +728,6 @@ class ComparisonAnalysisController(BaseController):
                     cointegration_period=ns_parser.cointperiod,
                     cointegration_alpha=ns_parser.cointalpha,
                     stationary_alpha=ns_parser.statalpha,
-                    half_time_rounding_type="floor",
-                    no_plot=ns_parser.no_plot,
                 )
 
                 """console.print(

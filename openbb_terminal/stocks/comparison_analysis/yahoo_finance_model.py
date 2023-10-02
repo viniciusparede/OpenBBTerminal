@@ -281,7 +281,6 @@ def get_cointegration_pairs(
     cointegration_period: int = 180,
     cointegration_alpha: float = 0.05,
     stationary_alpha: float = 0.01,
-    half_time_rounding_type: str = "floor",
 ) -> Optional[List[PairsTrading]]:
     def is_cointegrated() -> bool:
         """Cointegration test"""
@@ -339,17 +338,14 @@ def get_cointegration_pairs(
             half_life (int): The half-life of the residuals of the series, rounded up to the next whole number.
         """
 
-        def half_time() -> float:
-            return float(
-                -np.log(2)
-                / np.log(acf(x=residual, alpha=stationary_alpha, nlags=1)[0][1])
-            )
+        half_time = float(
+            -np.log(2) / np.log(acf(x=residual, alpha=stationary_alpha, nlags=1)[0][1])
+        )
 
-        if half_time_rounding_type == "floor":
-            return int(np.floor(half_time()))
+        if half_time > 1.5:
+            return int(np.ceil(half_time))
 
-        if half_time_rounding_type == "ceil":
-            return int(np.ceil(half_time()).astype("int"))
+        return int(np.floor(half_time))
 
     data: List[PairsTrading] = []
     input_ticker = similar[0]
@@ -461,10 +457,8 @@ if __name__ == "__main__":
     data = get_cointegration_pairs(
         similar=assets[2],
         cointegration_period=180,
-        cointegration_alpha=0.05,
+        cointegration_alpha=0.01,
         stationary_alpha=0.01,
-        half_time_rounding_type="floor",
-        candle_type="a",
     )
 
     print(data)

@@ -345,51 +345,110 @@ def display_coint_pairs(
     cointegration_period: int,
     cointegration_alpha: float,
     stationary_alpha: float,
-    half_time_rounding_type: str,
-    candle_type: str,
-    no_plot: bool = False,
-    stop_time_offset: int = 5,
     external_axes: bool = False,
 ):
+    xaxis_offset = 5
     data_pairs = yahoo_finance_model.get_cointegration_pairs(
         similar=similar,
         cointegration_period=cointegration_period,
         cointegration_alpha=cointegration_alpha,
         stationary_alpha=stationary_alpha,
-        half_time_rounding_type=half_time_rounding_type,
-        candle_type=candle_type,
     )
 
     if data_pairs:
-        if not no_plot:
-            fig = OpenBBFigure(yaxis_title=f"")
-            fig.set_title("Cointegration Pairs Trading")
+        fig = OpenBBFigure(yaxis_title=f"")
+        fig.set_title("Cointegration Pairs Trading")
+        fig.add_hline(y=3, line_width=4, line_dash="dash")
+        fig.add_hline(y=2, line_width=3, line_dash="dash")
+        fig.add_hline(y=1, line_width=2, line_dash="dash")
+        fig.add_hline(y=-1, line_width=2, line_dash="dash")
+        fig.add_hline(y=-2, line_width=3, line_dash="dash")
+        fig.add_hline(y=-3, line_width=4, line_dash="dash")
 
-            fig.add_hline(y=3, line_width=4, line_dash="dash")
-            fig.add_hline(y=2, line_width=3, line_dash="dash")
-            fig.add_hline(y=1, line_width=2, line_dash="dash")
-            fig.add_hline(y=-1, line_width=2, line_dash="dash")
-            fig.add_hline(y=-2, line_width=3, line_dash="dash")
-            fig.add_hline(y=-3, line_width=4, line_dash="dash")
+        fig.update_yaxes(range=[-4, 4])
+        fig.update_xaxes(
+            range=[
+                data_pairs[0]["date"].min(),
+                data_pairs[0]["date"].max() + timedelta(days=xaxis_offset),
+            ]
+        )
+        for data_pair in data_pairs:
+            fig.add_scatter(
+                x=data_pair["date"],
+                y=data_pair["residual"],
+                name=data_pair["pair"],
+            )
             fig.add_vline(
                 x=datetime.strptime(data_pairs[0]["stop_time"], "%Y-%m-%d"),
                 line_width=3,
                 line_color="red",
                 name="Stop day",
             )
+        top_n_name = ""
+        if external_axes:
+            return top_n_name, fig.show(external=external_axes)
+        fig.show(external=external_axes)
 
-            fig.update_yaxes(range=[-4, 4])
-            
 
-            for data_pair in data_pairs:
-                fig.add_scatter(
-                    x=data_pair["date"],
-                    y=data_pair["residual"],
-                    name=data_pair["pair"],
-                )
+if __name__ == "__main__":
+    assets = [
+        [
+            "AAPL",
+            "CMG",
+            "MSFT",
+            "ORCL",
+            "TSLA",
+            "ADBE",
+            "CRM",
+            "AMZN",
+            "GOOG",
+            "GOOGL",
+            "CDNS",
+        ],
+        [
+            "BOVA11.SA",
+            "RJF",
+            "AMP",
+            "VTRS",
+            "SCHW",
+            "AFL",
+            "PFG",
+            "GL",
+            "DXC",
+            "PRU",
+            "MET",
+        ],
+        [
+            "NVDA",
+            "AMD",
+            "MPWR",
+            "CDNS",
+            "SNPS",
+            "AVGO",
+            "ON",
+            "ANET",
+            "AMAT",
+            "ORCL",
+            "KLAC",
+        ],
+        [
+            "PETR4.SA",
+            "CVX",
+            "OXY",
+            "XOM",
+            "COP",
+            "PXD",
+            "EOG",
+            "HES",
+            "MPC",
+            "MRO",
+            "VLO",
+        ],
+    ]
 
-            top_n_name = ""
-            if external_axes:
-                return top_n_name, fig.show(external=external_axes)
-
-            fig.show(external=external_axes)
+    display_coint_pairs(
+        similar=assets[2],
+        cointegration_period=180,
+        cointegration_alpha=0.05,
+        stationary_alpha=0.01,
+    )
